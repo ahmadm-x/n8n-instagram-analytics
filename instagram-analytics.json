@@ -1,0 +1,114 @@
+{
+  "name": "Instagram AI Analytics & Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "cronExpression": "0 3 * * *"
+      },
+      "id": "Schedule_Trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.mocki.io/v2/79fb05cb", 
+        "responseFormat": "json"
+      },
+      "id": "Get_Instagram_Data",
+      "name": "Get Instagram Data (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const items = $input.all();\nfunction parseItem(it) {\n  const j = it.json;\n  const ts = new Date(j.timestamp);\n  return {\n    id: j.id,\n    caption: j.caption || \"\",\n    likes: Number(j.like_count || 0),\n    comments: Number(j.comments_count || 0),\n    timestamp: ts.toISOString(),\n    date: ts.toISOString().split('T')[0],\n    media_type: j.media_type || \"UNKNOWN\",\n    permalink: j.permalink || \"\"\n  };\n}\nconst out = items.map(it => ({ json: parseItem(it) }));\nreturn out;"
+      },
+      "id": "Clean_Data",
+      "name": "Normalize / Clean Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.all().map(i => i.json);\nconst totalPosts = data.length;\nconst totalLikes = data.reduce((s, p) => s + p.likes, 0);\nconst totalComments = data.reduce((s, p) => s + p.comments, 0);\nconst avgLikes = totalPosts ? (totalLikes / totalPosts) : 0;\nconst avgComments = totalPosts ? (totalComments / totalPosts) : 0;\nconst avgEngagement = (avgLikes + avgComments) / 1000;\nconst topByLikes = [...data].sort((a,b)=>b.likes-a.likes).slice(0,3);\nreturn [{ json: { totalPosts, totalLikes, totalComments, avgLikes, avgComments, avgEngagement, topByLikes } }];"
+      },
+      "id": "Aggregate_Metrics",
+      "name": "Aggregate Metrics",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "{ \"Content-Type\": \"application/json\", \"Authorization\": \"Bearer YOUR_OPENAI_KEY\" }",
+        "bodyParametersJson": "{ \"model\": \"gpt-4\", \"messages\": [ {\"role\": \"system\", \"content\": \"You are an Instagram growth analyst.\"}, {\"role\": \"user\", \"content\": \"Analyze the following data and give summary, recommendations, and captions: {{$json}}\"} ] }"
+      },
+      "id": "AI_Insights",
+      "name": "Call AI for Insights",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": "YOUR_SHEET_ID",
+        "range": "Summary!A1",
+        "options": {},
+        "valueInputMode": "USER_ENTERED",
+        "values": "[[\"{{$json.totalPosts}}\", \"{{$json.totalLikes}}\", \"{{$json.avgEngagement}}\"]]"
+      },
+      "id": "Save_Google_Sheets",
+      "name": "Save Summary to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [1500, 300],
+      "credentials": {
+        "googleApi": "Google Sheets Account"
+      }
+    },
+    {
+      "parameters": {
+        "html": "<html><body><h1>Instagram Weekly Report</h1><p>Posts: {{$json.totalPosts}}</p><p>Likes: {{$json.totalLikes}}</p><p>Avg Engagement: {{$json.avgEngagement}}</p></body></html>",
+        "options": {}
+      },
+      "id": "Generate_PDF",
+      "name": "Generate PDF",
+      "type": "n8n-nodes-base.htmlPdf",
+      "typeVersion": 1,
+      "position": [1750, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "report@example.com",
+        "toEmail": "owner@example.com",
+        "subject": "Weekly Instagram Report",
+        "text": "Attached is your weekly report.",
+        "attachments": "report.pdf"
+      },
+      "id": "Send_Email",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [2000, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": { "main": [ [ { "node": "Get Instagram Data (Mock)", "type": "main", "index": 0 } ] ] },
+    "Get Instagram Data (Mock)": { "main": [ [ { "node": "Normalize / Clean Data", "type": "main", "index": 0 } ] ] },
+    "Normalize / Clean Data": { "main": [ [ { "node": "Aggregate Metrics", "type": "main", "index": 0 } ] ] },
+    "Aggregate Metrics": { "main": [ [ { "node": "Call AI for Insights", "type": "main", "index": 0 } ] ] },
+    "Call AI for Insights": { "main": [ [ { "node": "Save Summary to Google Sheets", "type": "main", "index": 0 } ] ] },
+    "Save Summary to Google Sheets": { "main": [ [ { "node": "Generate PDF", "type": "main", "index": 0 } ] ] },
+    "Generate PDF": { "main": [ [ { "node": "Send Email", "type": "main", "index": 0 } ] ] }
+  }
+}

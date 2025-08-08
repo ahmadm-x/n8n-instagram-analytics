@@ -1,0 +1,54 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h1 { color: #E1306C; }
+    .summary { background: #f8f8f8; padding: 10px; margin-bottom: 20px; }
+    .metrics { display: flex; gap: 20px; }
+    .metric { background: #fff3f7; padding: 10px; border-radius: 8px; text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 8px; border-bottom: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <h1>📊 Instagram Weekly Report</h1>
+  <div class="summary">
+    <p><strong>Period:</strong> {{date_range}}</p>
+    <p><strong>Followers:</strong> {{followers}}</p>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <h2>{{totalPosts}}</h2>
+      <p>Posts</p>
+    </div>
+    <div class="metric">
+      <h2>{{totalLikes}}</h2>
+      <p>Likes</p>
+    </div>
+    <div class="metric">
+      <h2>{{avgEngagement}}%</h2>
+      <p>Engagement</p>
+    </div>
+  </div>
+
+  <h2>💡 AI Insights</h2>
+  <p>{{ai_summary}}</p>
+
+  <h2>📌 Recommendations</h2>
+  <ul>
+    {{#each recommendations}}
+      <li>{{this}}</li>
+    {{/each}}
+  </ul>
+
+  <h2>🏆 Top Posts</h2>
+  <table>
+    <tr><th>Caption</th><th>Likes</th><th>Comments</th></tr>
+    {{#each topPosts}}
+      <tr><td>{{caption}}</td><td>{{likes}}</td><td>{{comments}}</td></tr>
+    {{/each}}
+  </table>
+</body>
+</html>
